@@ -3,30 +3,30 @@ program alWJ
   real(dl), parameter :: pi = 3.14159265359
 
   integer :: i,j,k
-  integer :: imax = 10
-  real(dl)  :: atj(0:20000)
+  integer :: imax = 100, imin = 2
+  real(dl)  :: atj(0:20000),atj2(0:20000)
   integer :: min_k, max_k
   
 
-  do i = 2, imax
+  do i = imin, imax
      do j = i, imax
-        min_k = max(abs(i-j),2)  
-        if (mod(i+j+min_k,2)/=0) then
+        min_k = max(abs(i-j),imin)  
+        if (mod(i+j+min_k,2) .ne. 0) then
            min_k = min_k+1 ! should only lead to parity even numbers
         end if
         max_k = min(imax,i+j)
         call GetThreeJs(atj(abs(j-i)),i,j,0,0)
+        call GetThreeJs(atj2(max(2,abs(j-i))),i,j,2,0) 
         do k = min_k,max_k,2
            !i,j,k, interrative result, algebraiic result, rel error in %
            write(*,'(3I4,2E14.4,2X,F7.4)') i,j,k,atj(k), wigner3jm0(i,j,k), 100.*(atj(k)-wigner3jm0(i,j,k))/atj(k)
-           
+
+           !if you want to check accuracy of odd Wigners below, you need to change "if (mod(i+j+min_k,2) .eq. 0)" 
+           !write(*,'(3I4,2E14.4,2X,F9.4)') i,j,k,atj2(k), wigner3jm2m2(i,j,k), 100.*(atj2(k)-wigner3jm2m2(i,j,k))/atj2(k)
         enddo
 
      enddo
   enddo
-
-
-
 
 
 contains
@@ -45,6 +45,26 @@ contains
             sqrt(rmj(LtX)*rmj(LtY)*rmj(LtZ)/rmj(Lt+1))
     endif
   end function wigner3jm0
+  
+  !following arXiv 0001303, Eq. B1. Could be good for something I suppose. Not as accurate as the above. 
+  real(dl) function wigner3jm2m2(l1,l2,l3)
+    integer, intent (in) :: l1,l2,l3
+    integer :: LtX, LtY, LtZ, Lt
+    real :: temp
+    LtX = -l1+l2+l3
+    LtY = l1-l2+l3
+    LtZ = l1+l2-l3
+    Lt  = l1+l2+l3
+    if(mod(Lt,2)/=0) then
+       !write(*,*) lt, (-1)**((lt-1)/2.)
+       temp = (-1)**((lt-1)/2.) *et(Lt)*rmj(Lt/2)/(rmj(LtX/2)*rmj(LtY/2)*rmj(LtZ/2)) * &
+            sqrt(rmj(LtX)*rmj(LtY)*rmj(LtZ)/rmj(Lt+1))
+       wigner3jm2m2 = temp * 1./2.*((1.*l2)**2-(1.*l1)**2-(1.*l3)**2)/((1.*l1)**2*(1.*l3)**2)* &
+            (lt*LtX*LtY*LtZ)**(1/2.)
+    else
+      wigner3jm2m2 = 0.d0  
+    endif
+  end function wigner3jm2m2
 
   real(dl) function rmj(x)
     integer :: x
